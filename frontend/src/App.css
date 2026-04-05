@@ -1,0 +1,468 @@
+/* --- Estilos Globais e Variáveis de Cores "Tech" --- */
+:root {
+  --background-site: #F8FAFC; /* Cinza quase branco, muito limpo */
+  --cor-principal: #0F172A;   /* Azul-petróleo quase preto (premium/tech) */
+  --cor-secundaria: #1E293B;  /* Azul-petróleo escuro (texto principal) */
+  --cor-destaque: #F97316;     /* Laranja Tech vibrante para botões */
+  --cor-destaque-hover: #EA580C;
+  --cor-sucesso: #16A34A;     /* Verde para alertas e preço */
+  --cor-perigo: #DC2626;      /* Vermelho para excluir */
+  --cor-borda: #E2E8F0;
+  --cor-card-fundo: #FFFFFF;
+  --texto-claro: #F1F5F9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--background-site);
+  font-family: 'Poppins', sans-serif; /* A fonte nova tech */
+  color: var(--cor-secundaria);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 2rem 2rem;
+}
+
+/* --- Estilos do Header e Logotipo Modular --- */
+.main-header {
+  background-color: var(--cor-principal);
+  padding: 1rem 2rem;
+  color: var(--texto-claro);
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Criando o ícone Tech com CSS pura */
+.logo-icon {
+  background-color: var(--cor-destaque);
+  width: 45px;
+  height: 45px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: var(--cor-principal);
+}
+
+.icon-detail {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: var(--cor-principal);
+  border-radius: 50%;
+  bottom: -4px;
+  right: -4px;
+  border: 2px solid var(--cor-destaque);
+}
+
+.logo-text h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.logo-text h1 span {
+  color: var(--cor-destaque);
+}
+
+.logo-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.8;
+  color: var(--texto-claro);
+}
+
+/* --- Títulos e Seções --- */
+.titulo-secao {
+  text-align: left;
+  color: var(--cor-principal);
+  margin: 40px 0 20px 0;
+  border-bottom: 2px solid var(--cor-borda);
+  padding-bottom: 10px;
+  font-size: 1.5rem;
+}
+
+/* --- Painel Superior (Formulário e Carrinho) --- */
+.painel-controle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-top: -10px; /* Sobrepõe levemente a sombra do header */
+}
+
+@media (max-width: 900px) {
+  .painel-controle {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Estilos do Formulário de Cadastro --- */
+.form-container {
+  background-color: var(--cor-card-fundo);
+  padding: 25px;
+  border-radius: 12px; /* Bordas mais suaves */
+  border: 1px solid var(--cor-borda);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+}
+
+.form-container h2 {
+  margin-top: 0;
+  color: var(--cor-principal);
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input, textarea {
+  padding: 12px 15px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  background-color: #FAFAFA;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--cor-destaque);
+  background-color: #fff;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.btn-cadastrar {
+  background-color: var(--cor-principal);
+  color: white;
+  font-weight: 600;
+  margin-top: 5px;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-cadastrar:hover {
+  opacity: 0.9;
+}
+
+/* --- Estilos do Carrinho --- */
+.carrinho-container {
+  background-color: var(--cor-card-fundo);
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid var(--cor-borda);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.carrinho-container h2 {
+  margin-top: 0;
+  color: var(--cor-principal);
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--cor-borda);
+  padding-bottom: 15px;
+}
+
+.carrinho-vazio {
+  text-align: center;
+  color: #718096;
+  font-style: italic;
+  margin: auto;
+}
+
+.carrinho-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.carrinho-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.item-info strong {
+  color: var(--cor-destaque);
+  margin-right: 5px;
+}
+
+.item-acoes {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.item-acoes span {
+  font-weight: 600;
+  color: var(--cor-secundaria);
+}
+
+.btn-remover-carrinho {
+  background-color: transparent;
+  color: #CBD5E1; /* Cinza claro */
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 5px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-remover-carrinho:hover {
+  background-color: #FEE2E2;
+  color: var(--cor-perigo);
+}
+
+.carrinho-total {
+  margin-top: auto;
+  border-top: 2px solid var(--cor-borda);
+  padding-top: 20px;
+}
+
+.carrinho-total h3 {
+  margin: 0 0 20px 0;
+  color: var(--cor-principal);
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.3rem;
+}
+
+.btn-finalizar {
+  background-color: var(--cor-destaque);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-finalizar:hover {
+  background-color: var(--cor-destaque-hover);
+}
+
+/* --- Grid de Produtos --- */
+.produtos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+.produto-card {
+  position: relative;
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  background-color: var(--cor-card-fundo);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.produto-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* Botão de Excluir minimalista */
+.btn-excluir {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: transparent;
+  color: #CBD5E1;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.btn-excluir:hover {
+  background-color: #FEE2E2;
+  color: var(--cor-perigo);
+}
+
+.produto-card img {
+  max-width: 100%;
+  height: 150px;
+  object-fit: contain; /* Melhora imagens desproporcionais */
+  margin-bottom: 15px;
+  border-radius: 8px;
+}
+
+.produto-card h2 {
+  font-size: 1.1rem;
+  color: var(--cor-principal);
+  margin: 10px 0 5px 0;
+  font-weight: 600;
+  min-height: 2.2rem; /* Alinha os cards com nomes de tamanhos diferentes */
+}
+
+.produto-card p {
+  font-size: 0.9rem;
+  color: #64748B;
+  margin-bottom: 15px;
+  flex-grow: 1; /* Faz a descrição ocupar o espaço para alinhar o preço */
+}
+
+.preco {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--cor-sucesso);
+  margin: 10px 0 15px 0;
+}
+
+.btn-comprar {
+  background-color: transparent;
+  color: var(--cor-destaque);
+  border: 2px solid var(--cor-destaque);
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.btn-comprar:hover {
+  background-color: var(--cor-destaque);
+  color: white;
+}
+
+/* --- Footer --- */
+.main-footer {
+  background-color: var(--cor-principal);
+  color: var(--texto-claro);
+  text-align: center;
+  padding: 25px 0;
+  margin-top: 60px;
+  border-top: 4px solid var(--cor-destaque);
+}
+
+.main-footer p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* --- Navegação do Header --- */
+.header-nav {
+  display: flex;
+  gap: 25px;
+}
+
+.nav-link {
+  color: var(--texto-claro);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color 0.2s;
+  padding-bottom: 5px;
+}
+
+.nav-link:hover {
+  color: var(--cor-destaque);
+  border-bottom: 2px solid var(--cor-destaque);
+}
+
+/* --- Página Meus Pedidos --- */
+.pedidos-container {
+  background: var(--cor-card-fundo);
+  padding: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--cor-borda);
+  min-height: 50vh;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+}
+
+.busca-pedido-form {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+  max-width: 500px;
+}
+
+.busca-pedido-form input {
+  flex-grow: 1;
+}
+
+.busca-pedido-form button {
+  width: auto;
+  margin-top: 0;
+}
+
+.resultado-pedido {
+  background-color: #F8FAFC;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--cor-borda);
+}
+
+.mensagem-erro {
+  color: var(--cor-perigo);
+  font-weight: bold;
+}

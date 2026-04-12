@@ -1,93 +1,52 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom'; // Nossas ferramentas de rotas
-import FormularioProduto from './components/FormularioProduto';
-import ProdutoCard from './components/ProdutoCard';
-import Carrinho from './components/Carrinho';
+import { useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import MeusPedidos from './pages/MeusPedidos'; // Importando a página nova
 import './App.css';
+import GerenciamentoClientes from './pages/GerenciamentoClientes';
+import GerenciamentoProdutos from './pages/GerenciamentoProdutos';
+import GerenciamentoUsuarios from './pages/GerenciamentoUsuarios';
 
-// Transformamos a sua loja antiga em um componente interno temporário para organizar as rotas
-function Loja() {
-  const [produtos, setProdutos] = useState([]);
-  const [carrinho, setCarrinho] = useState([]);
-
-  const buscarProdutos = () => {
-    fetch('http://localhost:3000/produtos')
-      .then((resposta) => resposta.json())
-      .then((dados) => setProdutos(dados))
-      .catch((erro) => console.error('Erro ao buscar produtos:', erro));
-  };
-
-  useEffect(() => { buscarProdutos(); }, []);
-
-  const deletarProduto = (id) => {
-    fetch(`http://localhost:3000/produtos/${id}`, { method: 'DELETE' })
-      .then(() => buscarProdutos());
-  };
-
-  const adicionarAoCarrinho = (produtoSelecionado) => {
-    setCarrinho((carrinhoAtual) => {
-      const itemJaExiste = carrinhoAtual.find(item => item.id === produtoSelecionado.id);
-      if (itemJaExiste) {
-        return carrinhoAtual.map(item => item.id === produtoSelecionado.id ? { ...item, quantidade: item.quantidade + 1 } : item);
-      }
-      return [...carrinhoAtual, { ...produtoSelecionado, quantidade: 1 }];
-    });
-  };
-
-  const removerDoCarrinho = (idProduto) => {
-    setCarrinho((carrinhoAtual) => carrinhoAtual.filter((item) => item.id !== idProduto));
-  };
-
-  const finalizarCompra = () => {
-    if (carrinho.length === 0) return alert("Seu carrinho está vazio!");
-    const valorTotal = carrinho.reduce((total, item) => total + item.preco * item.quantidade, 0);
-
-    fetch('http://localhost:3000/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ itens: carrinho, valor_total: valorTotal })
-    })
-      .then(res => res.json())
-      .then(dados => {
-        alert(`Venda realizada! Pedido nº ${dados.pedidoId}`);
-        setCarrinho([]); 
-      });
-  };
-
-  return (
-    <>
-      <div className="painel-controle"> 
-        <FormularioProduto onProdutoAdicionado={buscarProdutos} />
-        <Carrinho itensCarrinho={carrinho} onRemoverItem={removerDoCarrinho} onFinalizar={finalizarCompra} />
-      </div>
-      <h2 className="titulo-secao">Nossos Produtos</h2>
-      <div className="produtos-grid">
-        {produtos.map((produto) => (
-          <ProdutoCard key={produto.id} produto={produto} onDeletar={deletarProduto} onAdicionar={adicionarAoCarrinho} />
-        ))}
-      </div>
-    </>
-  );
-}
-
-// O App principal agora só gerencia a Casca (Header/Footer) e as Rotas (O Miolo)
 function App() {
-  return (
-    <div className="app-wrapper"> 
-      <Header /> 
+  // Estado que guarda se existe alguém logado
+  const [usuarioLogado, setUsuarioLogado] = useState(null);
 
-      <div className="container"> 
-        {/* A MÁGICA ACONTECE AQUI: Ele troca o miolo baseado na URL */}
+  // Se NÃO houver ninguém logado, mostra apenas a tela de Login
+  if (!usuarioLogado) {
+    return <Login onLoginSucesso={setUsuarioLogado} />;
+  }
+
+  // Função para sair do sistema
+  const fazerLogout = () => {
+    setUsuarioLogado(null);
+  };
+
+  // Se estiver logado, libera o sistema corporativo
+  return (
+    <div className="app-wrapper">
+      <Header usuario={usuarioLogado} onLogout={fazerLogout} />
+
+      <div className="container">
         <Routes>
-          <Route path="/" element={<Loja />} />
-          <Route path="/pedidos" element={<MeusPedidos />} />
+
+          <Route path="/" element={<GerenciamentoProdutos />} />
+          <Route path="/usuarios" element={<GerenciamentoUsuarios />} />
+          <Route path="/clientes" element={<GerenciamentoClientes />} />
+          <Route path="*" element={<Navigate to="/" />} />
+
+          {/* Rota principal (Produtos) */}
+          <Route path="/" element={<GerenciamentoProdutos />} />
+          
+          {/* Rota de Funcionários */}
+          <Route path="/usuarios" element={<GerenciamentoUsuarios />} />
+          
+          {/* Rota de segurança para evitar que o usuário se perca */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
 
-      <Footer /> 
+      <Footer />
     </div>
   );
 }

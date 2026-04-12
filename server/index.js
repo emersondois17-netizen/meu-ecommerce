@@ -1,149 +1,233 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-
-// 1. Conexão com o Banco de Dados
-const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: process.env.DB_PASSWORD,
-  database: 'ecommerce'
-});
-
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error('Erro ao conectar ao banco de dados:', err);
-  } else {
-    console.log('Conectado ao MySQL com sucesso!');
-    connection.release();
-  }
-});
+app.use(express.json()); // Permite ler JSON no body de forma segura
 
 // ==========================================
-// ROTAS DE PRODUTOS
+// 1. CONEXÃO COM O MONGODB
+// ==========================================
+// O Mongoose gerencia a conexão de forma assíncrona e reconecta automaticamente se cair.
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/supermercado_admin')
+  .then(() => console.log('✅ Conectado ao MongoDB com sucesso!'))
+  .catch(err => console.error('❌ Erro ao conectar ao MongoDB:', err));
+
+// ==========================================
+// 2. SCHEMAS (MOLDES DE DADOS)
+// O MongoDB cria automaticamente um '_id' único e seguro para cada documento salvo.
 // ==========================================
 
-// Buscar todos os produtos
-app.get('/produtos', (req, res) => {
-  db.query('SELECT * FROM produtos', (err, results) => {
-    if (err) return res.status(500).send(err);
-    res.json(results);
-  });
+const usuarioSchema = new mongoose.Schema({
+  nome: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  senha: { type: String, required: true }, // Será salva criptografada
+  cpf: { type: String, required: true, unique: true }
 });
+const Usuario = mongoose.model('Usuario', usuarioSchema);
 
-// Cadastrar Produto + Integração API Unsplash
-app.post('/produtos', async (req, res) => {
-  const { nome, preco, descricao, imagem_url } = req.body;
-  
-  let urlFinalImagem = imagem_url;
+const produtoSchema = new mongoose.Schema({
+  nome: { type: String, required: true },
+  tipo: { type: String, required: true },
+  descricao: { type: String },
+  preco_atual: { type: Number, required: true },
+  preco_promocao: { type: Number, default: 0 }, // 0 = Sem promoção
+  data_validade: { type: Date, required: true },
+  imagem_url: { type: String }
+});
+const Produto = mongoose.model('Produto', produtoSchema);
 
-  // A JOGADA DE MESTRE: Verificamos se está vazio OU se é o placeholder do Frontend!
-  if (!urlFinalImagem || urlFinalImagem.includes('via.placeholder.com')) {
-    try {
-      // Sua Access Key do Unsplash
-      const unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY;
-      
-      const respostaUnsplash = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(nome)}&client_id=${unsplashAccessKey}&per_page=1`);
-      const dadosUnsplash = await respostaUnsplash.json();
+const clienteSchema = new mongoose.Schema({
+  nome: { type: String, required: true },
+  cpf_identidade: { type: String, required: true, unique: true },
+  idade: { type: Number, required: true },
+  tempo_cliente: { type: String }
+});
+const Cliente = mongoose.model('Cliente', clienteSchema);
 
-      if (dadosUnsplash.results && dadosUnsplash.results.length > 0) {
-        urlFinalImagem = dadosUnsplash.results[0].urls.regular;
-      } else {
-        urlFinalImagem = 'https://via.placeholder.com/150?text=Sem+Imagem';
-      }
-    } catch (erro) {
-      console.error('Erro ao buscar imagem na API:', erro);
-      urlFinalImagem = 'https://via.placeholder.com/150?text=Erro+na+API';
+// ==========================================
+// 3. ROTAS DE AUTENTICAÇÃO (LOGIN)
+// ==========================================
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+
+    // 1. Busca o usuário pelo email
+    const usuario = await Usuario.findOne({ email });
+    if (!usuario) {
+      return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
     }
+
+    // 2. Compara a senha digitada com a senha criptografada no banco
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaValida) {
+      return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
+    }
+
+    // Login aprovado! (Em um sistema real, retornaríamos um Token JWT aqui)
+    res.status(200).json({ mensagem: 'Login realizado com sucesso', usuario: { id: usuario._id, nome: usuario.nome } });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro interno no servidor' });
   }
-
-  const comandoSql = 'INSERT INTO produtos (nome, preco, descricao, imagem_url) VALUES (?, ?, ?, ?)';
-  
-  db.query(comandoSql, [nome, preco, descricao, urlFinalImagem], (err, results) => {
-    if (err) return res.status(500).json({ erro: 'Erro ao cadastrar o produto' });
-    res.status(201).json({ mensagem: 'Produto cadastrado com sucesso!', id: results.insertId });
-  });
-});
-
-// Deletar Produto
-app.delete('/produtos/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM produtos WHERE id = ?', [id], (err, results) => {
-    if (err) return res.status(500).send(err);
-    res.send('Produto deletado com sucesso!');
-  });
 });
 
 // ==========================================
-// ROTAS DE PEDIDOS E CHECKOUT
+// 4. ROTAS DE USUÁRIOS (FUNCIONÁRIOS)
 // ==========================================
 
-// Checkout (Finalizar Compra) com Transação
-app.post('/checkout', (req, res) => {
-  const { itens, valor_total } = req.body;
-
-  db.getConnection((err, connection) => {
-    if (err) return res.status(500).send(err);
-
-    connection.beginTransaction((err) => {
-      if (err) return res.status(500).send(err);
-
-      const sqlPedido = 'INSERT INTO pedidos (valor_total) VALUES (?)';
-      connection.query(sqlPedido, [valor_total], (err, result) => {
-        if (err) return connection.rollback(() => res.status(500).send(err));
-
-        const pedidoId = result.insertId;
-
-        const sqlItens = 'INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario) VALUES ?';
-        const valoresItens = itens.map(item => [pedidoId, item.id, item.quantidade, item.preco]);
-
-        connection.query(sqlItens, [valoresItens], (err) => {
-          if (err) return connection.rollback(() => res.status(500).send(err));
-
-          connection.commit((err) => {
-            if (err) return connection.rollback(() => res.status(500).send(err));
-            res.status(201).json({ mensagem: 'Pedido registrado com sucesso!', pedidoId });
-          });
-        });
-      });
-    });
-  });
+app.get('/usuarios', async (req, res) => {
+  try {
+    // Retorna todos os usuários, mas exclui o campo de senha por segurança (-senha)
+    const usuarios = await Usuario.find().select('-senha');
+    res.json(usuarios);
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao buscar usuários' });
+  }
 });
 
-// Rastrear Pedido Específico
-app.get('/pedidos/:id', (req, res) => {
-  const { id } = req.params;
-  
-  const sqlPedido = 'SELECT * FROM pedidos WHERE id = ?';
-  const sqlItens = `
-    SELECT ip.quantidade, ip.preco_unitario, p.nome, p.imagem_url 
-    FROM itens_pedido ip 
-    JOIN produtos p ON ip.produto_id = p.id 
-    WHERE ip.pedido_id = ?
-  `;
+app.post('/usuarios', async (req, res) => {
+  try {
+    const { nome, email, senha, cpf } = req.body;
 
-  db.query(sqlPedido, [id], (err, resultPedido) => {
-    if (err) return res.status(500).send(err);
-    if (resultPedido.length === 0) return res.status(404).json({ erro: 'Pedido não encontrado' });
+    // Criptografa a senha antes de salvar no banco (10 "salt rounds" é o padrão seguro)
+    const salt = await bcrypt.genSalt(10);
+    const senhaHash = await bcrypt.hash(senha, salt);
 
-    db.query(sqlItens, [id], (err, resultItens) => {
-      if (err) return res.status(500).send(err);
-      
-      res.json({
-        pedido: resultPedido[0],
-        itens: resultItens
-      });
-    });
-  });
+    const novoUsuario = new Usuario({ nome, email, senha: senhaHash, cpf });
+    await novoUsuario.save(); // Salva no MongoDB
+
+    res.status(201).json({ mensagem: 'Usuário cadastrado com sucesso!', id: novoUsuario._id });
+  } catch (erro) {
+    // Tratamento específico se o e-mail ou CPF já existirem (Erro 11000 do MongoDB)
+    if (erro.code === 11000) return res.status(400).json({ erro: 'E-mail ou CPF já cadastrado' });
+    res.status(500).json({ erro: 'Erro ao cadastrar usuário' });
+  }
 });
 
-// Ligar o Servidor
+// ==========================================
+// 5. ROTAS DE PRODUTOS (Com Unsplash Integrado)
+// ==========================================
+
+app.get('/produtos', async (req, res) => {
+  try {
+    const produtos = await Produto.find();
+    res.json(produtos);
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao buscar produtos' });
+  }
+});
+
+app.post('/produtos', async (req, res) => {
+  try {
+    const { nome, tipo, descricao, preco_atual, data_validade, imagem_url } = req.body;
+    let urlFinalImagem = imagem_url;
+
+    // Automação do Unsplash (Adaptada para Async/Await limpo)
+    if (!urlFinalImagem || urlFinalImagem.includes('via.placeholder.com')) {
+      try {
+        const unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY;
+        const respostaUnsplash = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(nome)}&client_id=${unsplashAccessKey}&per_page=1`);
+        const dadosUnsplash = await respostaUnsplash.json();
+
+        if (dadosUnsplash.results && dadosUnsplash.results.length > 0) {
+          urlFinalImagem = dadosUnsplash.results[0].urls.regular;
+        } else {
+          urlFinalImagem = 'https://via.placeholder.com/150?text=Sem+Imagem';
+        }
+      } catch (erroUnsplash) {
+        console.error('Erro na API Unsplash:', erroUnsplash);
+        urlFinalImagem = 'https://via.placeholder.com/150?text=Erro+API';
+      }
+    }
+
+    const novoProduto = new Produto({
+      nome, tipo, descricao, preco_atual, data_validade, imagem_url: urlFinalImagem
+    });
+    
+    await novoProduto.save();
+    res.status(201).json({ mensagem: 'Produto cadastrado!', id: novoProduto._id });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao cadastrar produto', detalhes: erro.message });
+  }
+});
+
+// Rota para Atualizar um Produto (Usada para Aplicar Promoções)
+app.put('/produtos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const atualizacoes = req.body; // Pega os novos dados (ex: { preco_promocao: 10.50 })
+
+    // findByIdAndUpdate busca e atualiza em um único comando seguro
+    const produtoAtualizado = await Produto.findByIdAndUpdate(id, atualizacoes, { new: true });
+    
+    if (!produtoAtualizado) return res.status(404).json({ erro: 'Produto não encontrado' });
+    res.json({ mensagem: 'Produto atualizado!', produto: produtoAtualizado });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao atualizar produto' });
+  }
+});
+
+app.delete('/produtos/:id', async (req, res) => {
+  try {
+    await Produto.findByIdAndDelete(req.params.id);
+    res.json({ mensagem: 'Produto removido com sucesso!' });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao deletar produto' });
+  }
+});
+
+// ==========================================
+// 6. ROTAS DE CLIENTES
+// ==========================================
+
+// Buscar Clientes
+app.get('/clientes', async (req, res) => {
+  try {
+    const clientes = await Cliente.find();
+    res.json(clientes);
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao buscar clientes' });
+  }
+});
+
+// Cadastrar Cliente
+app.post('/clientes', async (req, res) => {
+  try {
+    const { nome, cpf_identidade, idade, tempo_cliente } = req.body;
+    
+    const novoCliente = new Cliente({ 
+      nome, 
+      cpf_identidade, 
+      idade: Number(idade), 
+      tempo_cliente 
+    });
+    
+    await novoCliente.save();
+    res.status(201).json({ mensagem: 'Cliente cadastrado com sucesso!', id: novoCliente._id });
+  } catch (erro) {
+    if (erro.code === 11000) return res.status(400).json({ erro: 'CPF/Identidade já cadastrado no sistema.' });
+    res.status(500).json({ erro: 'Erro ao cadastrar cliente' });
+  }
+});
+
+// Deletar Cliente (Bônus para facilitar a gestão)
+app.delete('/clientes/:id', async (req, res) => {
+  try {
+    await Cliente.findByIdAndDelete(req.params.id);
+    res.json({ mensagem: 'Cliente removido com sucesso!' });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao deletar cliente' });
+  }
+});
+
+// ==========================================
+// INICIALIZAÇÃO DO SERVIDOR
+// ==========================================
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

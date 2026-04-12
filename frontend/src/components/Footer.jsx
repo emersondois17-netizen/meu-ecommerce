@@ -1,9 +1,9 @@
 function Footer() {
   return (
-    <footer className="main-footer">
-      <div className="container">
-        <p>&copy; 2026 TechNova Hardware. Todos os direitos reservados.</p>
-        <p>Desenvolvido com React e Node.js</p>
+    <footer className="admin-footer">
+      <div className="footer-content">
+        <p>© {new Date().getFullYear()} Supermercado UNIFACISA. Todos os direitos reservados.</p>
+        <p>Projeto de Análise e Desenvolvimento de Sistemas | Prof. Bruno Rafael</p>
       </div>
     </footer>
   );

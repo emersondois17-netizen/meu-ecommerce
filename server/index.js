@@ -3,6 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+// Chave secreta (O ideal é colocar isso no .env como JWT_SECRET)
+const JWT_SECRET = process.env.JWT_SECRET || 'chave_secreta_supermercado_unifacisa';
 
 const app = express();
 app.use(cors());
@@ -56,24 +60,46 @@ app.post('/api/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    // 1. Busca o usuário pelo email
     const usuario = await Usuario.findOne({ email });
-    if (!usuario) {
-      return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
-    }
+    if (!usuario) return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
 
-    // 2. Compara a senha digitada com a senha criptografada no banco
     const senhaValida = await bcrypt.compare(senha, usuario.senha);
-    if (!senhaValida) {
-      return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
-    }
+    if (!senhaValida) return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
 
-    // Login aprovado! (Em um sistema real, retornaríamos um Token JWT aqui)
-    res.status(200).json({ mensagem: 'Login realizado com sucesso', usuario: { id: usuario._id, nome: usuario.nome } });
+    // GERAÇÃO DO TOKEN JWT (Dura 1 hora)
+    const token = jwt.sign(
+      { id: usuario._id, identificador: usuario.identificador }, 
+      JWT_SECRET, 
+      { expiresIn: '1h' }
+    );
+
+    res.status(200).json({ 
+      mensagem: 'Login realizado com sucesso', 
+      usuario: { id: usuario._id, nome: usuario.nome },
+      token // <-- Enviando o crachá para o Frontend!
+    });
   } catch (erro) {
     res.status(500).json({ erro: 'Erro interno no servidor' });
   }
 });
+
+// "CATRACA" DIGITAL (Middleware de Segurança)
+// Usaremos isso nas próximas rotas para blindar o sistema
+const verificarToken = (req, res, next) => {
+  const token = req.headers['authorization'];
+  
+  if (!token) return res.status(403).json({ erro: 'Acesso negado. Token não fornecido.' });
+
+  try {
+    // Tira a palavra "Bearer " da string do token e verifica
+    const tokenPuro = token.split(' ')[1];
+    const decodificado = jwt.verify(tokenPuro, JWT_SECRET);
+    req.usuarioLogado = decodificado; // Salva os dados do usuário para a rota usar se quiser
+    next(); // Libera a catraca!
+  } catch (err) {
+    res.status(401).json({ erro: 'Token inválido ou expirado. Faça login novamente.' });
+  }
+};
 
 // ==========================================
 // 4. ROTAS DE USUÁRIOS (FUNCIONÁRIOS)
@@ -108,6 +134,15 @@ app.post('/usuarios', async (req, res) => {
   }
 });
 
+app.delete('/usuarios/:id', async (req, res) => {
+  try {
+    await Usuario.findByIdAndDelete(req.params.id);
+    res.json({ mensagem: 'Usuário removido com sucesso!' });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao deletar usuário' });
+  }
+});
+
 // ==========================================
 // 5. ROTAS DE PRODUTOS (Com Unsplash Integrado)
 // ==========================================
@@ -126,8 +161,8 @@ app.post('/produtos', async (req, res) => {
     const { nome, tipo, descricao, preco_atual, data_validade, imagem_url } = req.body;
     let urlFinalImagem = imagem_url;
 
-    // Automação do Unsplash (Adaptada para Async/Await limpo)
-    if (!urlFinalImagem || urlFinalImagem.includes('via.placeholder.com')) {
+    // Se o usuário não mandou imagem, tenta o Unsplash
+    if (!urlFinalImagem) {
       try {
         const unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY;
         const respostaUnsplash = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(nome)}&client_id=${unsplashAccessKey}&per_page=1`);
@@ -136,11 +171,12 @@ app.post('/produtos', async (req, res) => {
         if (dadosUnsplash.results && dadosUnsplash.results.length > 0) {
           urlFinalImagem = dadosUnsplash.results[0].urls.regular;
         } else {
-          urlFinalImagem = 'https://via.placeholder.com/150?text=Sem+Imagem';
+          throw new Error("Sem fotos no Unsplash"); // Força a usar o padrão abaixo
         }
       } catch (erroUnsplash) {
-        console.error('Erro na API Unsplash:', erroUnsplash);
-        urlFinalImagem = 'https://via.placeholder.com/150?text=Erro+API';
+        console.error('⚠️ Aviso: Não foi possível buscar imagem externa. Usando imagem padrão.');
+        // Uma imagem padrão super confiável do Wikipedia (nunca cai)
+        urlFinalImagem = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
       }
     }
 

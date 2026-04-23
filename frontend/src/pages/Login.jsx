@@ -34,9 +34,12 @@ function Login({ onLoginSucesso }) {
 
       if (isCadastro) {
         alert('Administrador criado com sucesso! Agora faça o login.');
-        setIsCadastro(false); // Volta para a tela de login
+        setIsCadastro(false);
       } else {
-        // Se for login, passa os dados do usuário para o App.jsx liberar a tela
+        // SALVA O TOKEN NO NAVEGADOR
+        localStorage.setItem('tokenSupermercado', dados.token);
+        localStorage.setItem('usuarioSupermercado', JSON.stringify(dados.usuario));
+        
         onLoginSucesso(dados.usuario);
       }
     } catch (err) {

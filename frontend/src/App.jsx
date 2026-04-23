@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Header from './components/Header';
@@ -9,16 +9,25 @@ import GerenciamentoProdutos from './pages/GerenciamentoProdutos';
 import GerenciamentoUsuarios from './pages/GerenciamentoUsuarios';
 
 function App() {
-  // Estado que guarda se existe alguém logado
   const [usuarioLogado, setUsuarioLogado] = useState(null);
 
-  // Se NÃO houver ninguém logado, mostra apenas a tela de Login
+  // Assim que o site abre, ele verifica se já existe um crachá guardado
+  useEffect(() => {
+    const usuarioSalvo = localStorage.getItem('usuarioSupermercado');
+    const tokenSalvo = localStorage.getItem('tokenSupermercado');
+    
+    if (usuarioSalvo && tokenSalvo) {
+      setUsuarioLogado(JSON.parse(usuarioSalvo));
+    }
+  }, []);
+
   if (!usuarioLogado) {
     return <Login onLoginSucesso={setUsuarioLogado} />;
   }
 
-  // Função para sair do sistema
   const fazerLogout = () => {
+    localStorage.removeItem('tokenSupermercado');
+    localStorage.removeItem('usuarioSupermercado');
     setUsuarioLogado(null);
   };
 

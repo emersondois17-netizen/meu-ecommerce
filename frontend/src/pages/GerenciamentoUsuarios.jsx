@@ -44,6 +44,24 @@ function GerenciamentoUsuarios() {
     }
   };
 
+  const deletarUsuario = async (id) => {
+    if(window.confirm('Tem certeza que deseja remover o acesso deste funcionário?')) {
+      try {
+        const resposta = await fetch(`http://localhost:3000/usuarios/${id}`, { 
+          method: 'DELETE' 
+        });
+        
+        if (resposta.ok) {
+          carregarUsuarios(); // Atualiza a tabela na hora
+        } else {
+          alert('Erro ao remover funcionário.');
+        }
+      } catch (erro) {
+        console.error('Erro:', erro);
+      }
+    }
+  };
+
   return (
     <div className="admin-section">
       <h2>👥 Gerenciamento de Funcionários</h2>
@@ -72,6 +90,7 @@ function GerenciamentoUsuarios() {
                 <th>Nome</th>
                 <th>E-mail</th>
                 <th>CPF</th>
+                <th>Ações</th> {/* <-- NOVA COLUNA ADICIONADA AQUI */}
               </tr>
             </thead>
             <tbody>
@@ -81,6 +100,12 @@ function GerenciamentoUsuarios() {
                   <td>{u.nome}</td>
                   <td>{u.email}</td>
                   <td>{u.cpf}</td>
+                  <td>
+                    {/* <-- BOTÃO DE REMOVER ADICIONADO AQUI */}
+                    <button onClick={() => deletarUsuario(u._id)} className="btn-danger">
+                      Remover
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
